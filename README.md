@@ -2,6 +2,7 @@
 
 A full-stack application for training and evaluating multi-task LSTM networks on financial bar data. Fetch historical OHLCV data, engineer features, configure training targets, train PyTorch models, and evaluate results — all through a browser UI backed by a FastAPI + MariaDB stack.
 
+A companion Jupyter notebook (`notebooks/lstm2_pipeline.ipynb`) walks through the entire pipeline end-to-end with definitions, example settings, and interactive Plotly charts — no server or database required.
 
 ---
 
@@ -14,6 +15,7 @@ A full-stack application for training and evaluating multi-task LSTM networks on
 | Database | MariaDB (Docker Compose) |
 | ML | PyTorch 2.2.2, scikit-learn, pandas, NumPy |
 | Charts | lightweight-charts v5, Recharts |
+| Notebook | Jupyter Notebook, Plotly, yfinance |
 
 ---
 
@@ -64,7 +66,7 @@ Fetch historical OHLCV bars from Alpaca Market Data and upsert them into MariaDB
 - **Features** — compute and save technical indicators (100 indicators across 6 categories: Trend, Momentum, Volatility, Volume, Trend Strength, Price Action)
 - **Delete** — remove all bars for that symbol/timeframe/feed/adjustment
 
-Includes a **Best Results Guidelines** section covering recommended bar counts, symbol quality, timeframe selection, adjustment types, and feed options.
+Includes a **Best Results Guidelines** section covering recommended bar counts, symbol quality, timeframe selection, adjustment types, history alignment with targets, and feed options.
 
 ---
 
@@ -88,7 +90,14 @@ Configure and save training datasets. Select a symbol/timeframe, choose feature 
 
 ![Training](docs/screen-shots/training.png)
 
-Select a saved configuration and launch a training run. Set hyperparameters (hidden size, layers, dropout, optimizer, learning rate, scheduler, early stopping patience, per-task loss functions and weights). Live progress shows epoch loss curves for each task. Supports early stopping and mid-run cancellation. Best-epoch model checkpoint and scaler are saved to `models/config_{id}/`.
+Select a saved configuration and launch a training run. Set hyperparameters (hidden size, layers, dropout, optimizer, learning rate, scheduler, early stopping patience, per-task loss functions and weights). Live progress shows:
+- Epoch loss curves for train and validation
+- Overfitting gap chart
+- Learning rate chart with a per-epoch change log showing exactly which epoch the scheduler fired and what the new value is
+- Gradient norm chart
+- Per-task loss breakdown
+
+Supports early stopping and mid-run cancellation. Best-epoch model checkpoint and scaler are saved to `models/config_{id}/`.
 
 ---
 
@@ -106,6 +115,39 @@ Evaluate a completed training run against its held-out test set. Results are cac
 - Technical indicator overlays from the config's feature columns
 - Classification predictions as ▲/▼ candle markers (green = correct, red = incorrect)
 - Regression task predictions vs actuals as synced sub-panes below the main chart
+
+---
+
+## Jupyter Notebook
+
+`notebooks/lstm2_pipeline.ipynb` is a standalone educational walkthrough of the full pipeline. It runs locally using the project's `.venv` with no FastAPI server or database required — data is fetched via `yfinance`.
+
+**Install notebook extras (one-time, does not modify `pyproject.toml`):**
+```bash
+source .venv/bin/activate
+uv pip install notebook yfinance plotly
+```
+
+**Launch:**
+```bash
+source .venv/bin/activate
+jupyter notebook notebooks/lstm2_pipeline.ipynb
+```
+
+**Sections:**
+
+| § | Topic | What you see |
+|---|---|---|
+| 1 | OHLCV Bar Data | DataFrame + candlestick chart |
+| 2 | Technical Indicators | 100-indicator catalogue + SMA/RSI chart |
+| 3 | Prediction Targets | Target distribution + price coloured by label |
+| 4 | NaN Cleaning | Drop summary + top NaN contributors |
+| 5 | Train/Val/Test Split | Split table + timeline chart |
+| 6 | Feature Scaling | Before/after table + distribution histogram |
+| 7 | Sliding Window | Tensor shape table + sample window DataFrame |
+| 8 | LSTM Architecture | Parameter table + forward pass verification |
+| 9 | Training Loop | Epoch log + loss/LR schedule charts |
+| 10 | Evaluation | Metrics table + confusion matrix + probability histogram |
 
 ---
 
@@ -128,6 +170,8 @@ lstm-2/
 │           ├── components/    # CandleChart, SubPane, Layout
 │           ├── lib/           # chartTime.js shared utility
 │           └── pages/         # One file per page
+├── notebooks/
+│   └── lstm2_pipeline.ipynb  # End-to-end pipeline walkthrough
 ├── mysql/                    # Docker Compose MariaDB service
 │   ├── docker-compose.yml
 │   └── mysql-conf/my.cnf

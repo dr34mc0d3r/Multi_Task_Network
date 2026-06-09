@@ -8,3 +8,15 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Node
+node_modules/
+**/node_modules/
+
+# Environment / secrets — never commit these
+.env
+**/.env
+
+# macOS metadata
+.DS_Store
+**/.DS_Store

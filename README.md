@@ -49,7 +49,7 @@ App: `http://localhost:5173`
 
 ### Home
 
-![Home](docs/screen-shots/home.png)
+![Home](docs/screen-shots/chart1.png)
 
 Entry point. Use the nav to access any section of the pipeline.
 

@@ -57,6 +57,7 @@ def start_run(body: StartRunRequest, db: Session = Depends(get_db)):
         "val_losses": [],
         "grad_norms": [],
         "learning_rates": [],
+        "current_lr": hp["learning_rate"],
         "task_train_losses": {},
         "task_val_losses": {},
         "best_epoch": None,

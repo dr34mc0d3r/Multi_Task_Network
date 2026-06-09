@@ -21,7 +21,13 @@ function LineChart({ lines, referenceY, title, height = 130 }) {
   let minV = Math.min(...allVals)
   let maxV = Math.max(...allVals)
   if (referenceY != null) { minV = Math.min(minV, referenceY); maxV = Math.max(maxV, referenceY) }
-  const range = maxV - minV || 1
+  let range = maxV - minV
+  if (range === 0) {
+    const pad = Math.abs(minV) * 0.1 || 0.1
+    minV -= pad
+    maxV += pad
+    range = maxV - minV
+  }
 
   const toX = (i, n) => PAD.left + (n > 1 ? (i / (n - 1)) * IW : IW / 2)
   const toY = (v) => PAD.top + (1 - (v - minV) / range) * IH
@@ -41,7 +47,7 @@ function LineChart({ lines, referenceY, title, height = 130 }) {
             />
             <text x={PAD.left - 4} y={toY(v)} textAnchor="end" dominantBaseline="middle"
               fontSize="8" fill="#9ca3af">
-              {Math.abs(v) < 0.001 ? v.toExponential(1) : v.toFixed(4)}
+              {Math.abs(v) >= 1000 ? v.toExponential(2) : Math.abs(v) < 0.001 ? v.toExponential(2) : v.toPrecision(4)}
             </text>
           </g>
         ))}
@@ -399,6 +405,15 @@ export default function Training() {
           <div className="flex flex-wrap gap-4 text-xs text-gray-600 mb-4 p-2 bg-gray-50 rounded border border-gray-100">
             <span>Epoch <strong>{progress.current_epoch}</strong> / {progress.total_epochs}</span>
             <span>No improvement: <strong>{progress.no_improve_count ?? 0}</strong> / {patience}</span>
+            {progress.current_lr != null && (
+              <span>
+                LR: <strong className="font-mono">
+                  {progress.current_lr < 1e-4
+                    ? progress.current_lr.toExponential(2)
+                    : progress.current_lr.toPrecision(4)}
+                </strong>
+              </span>
+            )}
             {progress.best_epoch != null && (
               <span>
                 Best epoch: <strong>{progress.best_epoch}</strong> · val loss:{' '}
@@ -430,12 +445,35 @@ export default function Training() {
             )}
 
             {/* Learning Rate */}
-            {(progress.learning_rates?.length ?? 0) > 0 && (
-              <LineChart
-                title="Learning Rate"
-                lines={[{ data: progress.learning_rates, color: '#22c55e', label: 'lr' }]}
-              />
-            )}
+            {(progress.learning_rates?.length ?? 0) > 0 && (() => {
+              const lrs = progress.learning_rates
+              const fmtLR = (v) => v < 1e-4 ? v.toExponential(2) : v.toPrecision(4)
+              const changes = []
+              lrs.forEach((lr, i) => {
+                if (i === 0 || lr !== lrs[i - 1]) {
+                  changes.push({ epoch: i + 1, lr, decreased: i > 0 && lr < lrs[i - 1] })
+                }
+              })
+              return (
+                <div>
+                  <LineChart
+                    title="Learning Rate"
+                    lines={[{ data: lrs, color: '#22c55e', label: 'lr' }]}
+                  />
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono">
+                    {changes.length === 1 ? (
+                      <span className="text-gray-400">constant: {fmtLR(changes[0].lr)}</span>
+                    ) : (
+                      changes.map(({ epoch, lr, decreased }) => (
+                        <span key={epoch} className={decreased ? 'text-amber-600' : 'text-gray-400'}>
+                          ep{epoch}: {decreased && '↓'}{fmtLR(lr)}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Gradient Norm */}
             {(progress.grad_norms?.length ?? 0) > 0 && (

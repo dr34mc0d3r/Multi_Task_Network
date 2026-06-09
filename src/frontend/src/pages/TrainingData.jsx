@@ -243,18 +243,18 @@ function SelectTrainingData({ selected, onSelect }) {
   const loadSummary = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/bars/summary')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const rows = await res.json()
+      const [summaryRes, featuresRes] = await Promise.all([
+        fetch('/api/bars/summary'),
+        fetch('/api/features/saved-all'),
+      ])
+      if (!summaryRes.ok) throw new Error(`HTTP ${summaryRes.status}`)
+      const rows = await summaryRes.json()
+      const allFeatures = featuresRes.ok ? await featuresRes.json() : {}
       setSummary(rows)
-      const entries = await Promise.all(rows.map(async row => {
-        const qs = new URLSearchParams({ symbol: row.symbol, timeframe: row.timeframe, feed: row.feed, adjustment: row.adjustment })
-        try {
-          const r = await fetch(`/api/features/saved?${qs}`)
-          const keys = r.ok ? await r.json() : []
-          return [rowKey(row), keys.length]
-        } catch { return [rowKey(row), 0] }
-      }))
+      const entries = rows.map(row => {
+        const key = `${row.symbol}|${row.timeframe}|${row.feed}|${row.adjustment}`
+        return [rowKey(row), (allFeatures[key] ?? []).length]
+      })
       setFeatureCounts(Object.fromEntries(entries))
     } catch (err) { setError(err.message) }
     finally { setLoading(false) }

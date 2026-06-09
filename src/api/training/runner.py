@@ -239,6 +239,7 @@ def run_training(
                     "val_losses": val_losses[:],
                     "grad_norms": grad_norms[:],
                     "learning_rates": learning_rates[:],
+                    "current_lr": optimizer.param_groups[0]["lr"],
                     "task_train_losses": {k: v[:] for k, v in task_train_losses.items()},
                     "task_val_losses": {k: v[:] for k, v in task_val_losses.items()},
                     "best_epoch": best_epoch,

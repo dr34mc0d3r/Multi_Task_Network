@@ -91,8 +91,9 @@ class FeaturesRepository:
         t = FEATURES_TABLE
         try:
             with engine.connect() as conn:
-                count = conn.execute(
-                    select(func.count()).select_from(t).where(
+                exprs = [func.count(t.c[k]).label(k) for k in INDICATOR_KEYS]
+                row = conn.execute(
+                    select(*exprs).where(
                         and_(
                             t.c.symbol == symbol.upper(),
                             t.c.timeframe == timeframe,
@@ -100,29 +101,34 @@ class FeaturesRepository:
                             t.c.adjustment == adjustment,
                         )
                     )
-                ).scalar_one()
-                if count == 0:
-                    return []
-                saved = []
-                for k in INDICATOR_KEYS:
-                    n = conn.execute(
-                        select(func.count()).select_from(t).where(
-                            and_(
-                                t.c.symbol == symbol.upper(),
-                                t.c.timeframe == timeframe,
-                                t.c.feed == feed,
-                                t.c.adjustment == adjustment,
-                                t.c[k].isnot(None),
-                            )
-                        )
-                    ).scalar_one()
-                    if n > 0:
-                        saved.append(k)
-                return saved
+                ).mappings().one()
+                return [k for k in INDICATOR_KEYS if row[k] > 0]
         except (OperationalError, ProgrammingError):
             return []
         except SQLAlchemyError as exc:
             raise DatabaseError("Failed to query saved indicators.") from exc
+        finally:
+            engine.dispose()
+
+    def all_saved_indicators(self) -> dict[str, list[str]]:
+        engine = self._engine()
+        t = FEATURES_TABLE
+        try:
+            with engine.connect() as conn:
+                group_cols = [t.c.symbol, t.c.timeframe, t.c.feed, t.c.adjustment]
+                exprs = [func.count(t.c[k]).label(k) for k in INDICATOR_KEYS]
+                rows = conn.execute(
+                    select(*group_cols, *exprs).group_by(*group_cols)
+                ).mappings().all()
+                result = {}
+                for row in rows:
+                    key = f"{row['symbol']}|{row['timeframe']}|{row['feed']}|{row['adjustment']}"
+                    result[key] = [k for k in INDICATOR_KEYS if row[k] > 0]
+                return result
+        except (OperationalError, ProgrammingError):
+            return {}
+        except SQLAlchemyError as exc:
+            raise DatabaseError("Failed to query all saved indicators.") from exc
         finally:
             engine.dispose()
 

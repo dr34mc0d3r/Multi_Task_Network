@@ -69,6 +69,14 @@ def get_saved(
         raise HTTPException(400, str(exc))
 
 
+@router.get("/saved-all")
+def get_all_saved() -> dict[str, list[str]]:
+    try:
+        return _features_repo().all_saved_indicators()
+    except DownloaderError as exc:
+        raise HTTPException(400, str(exc))
+
+
 @router.get("/bars")
 def get_feature_bars(
     symbol: str = Query(...),

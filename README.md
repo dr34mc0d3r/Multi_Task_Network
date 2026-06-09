@@ -2,6 +2,7 @@
 
 A full-stack application for training and evaluating multi-task LSTM networks on financial bar data. Fetch historical OHLCV data, engineer features, configure training targets, train PyTorch models, and evaluate results — all through a browser UI backed by a FastAPI + MariaDB stack.
 
+
 ---
 
 ## Stack
